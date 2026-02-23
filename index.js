@@ -6,7 +6,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-const TOKEN = "MTQ3Mzc4NTcwNDEwNTUwOTEwNA.GyB4wY.eMudW-KmU5iEt050XWTbW66IwulzhE70E_RZ7A";  // ضع توكن البوت الجديد هنا
+const TOKEN = "MTQ3Mzc4NTcwNDEwNTUwOTEwNA.GYHDdc.5VpxWTxHrX4syT00wFBAFtE78-CS8sPrVNcsgM";  // ضع توكن البوت الجديد هنا
 const CHANNEL_ID = "1473787601520693331";  // ايدي القناة
 
 let currentPage = 1;  // بداية من الصفحة 1
@@ -51,5 +51,6 @@ client.once('ready', () => {
     await sendPage();
   }, 10 * 60 * 1000);  // 10 دقائق = 600,000 ملي ثانية
 });
+
 
 client.login(TOKEN);
