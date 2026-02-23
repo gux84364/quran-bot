@@ -6,7 +6,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-const TOKEN = "MTQ3Mzc4NTcwNDEwNTUwOTEwNA.GYHDdc.5VpxWTxHrX4syT00wFBAFtE78-CS8sPrVNcsgM";  // ضع توكن البوت الجديد هنا
+const TOKEN = process.env.TOKEN;  // سيقرأ التوكن من Environment Variables
 const CHANNEL_ID = "1473787601520693331";  // ايدي القناة
 
 let currentPage = 1;  // بداية من الصفحة 1
@@ -54,3 +54,4 @@ client.once('ready', () => {
 
 
 client.login(TOKEN);
+
