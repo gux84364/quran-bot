@@ -9,12 +9,13 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
 const sharp = require('sharp');  // مكتبة sharp لتحرير الصور
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
 const TOKEN = process.env.TOKEN;  // سيقرأ التوكن من Environment Variables
@@ -57,13 +58,10 @@ async function sendPage() {
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 
-  // 🔹 تعديل الوقت: كل 10 دقائق
+  // 🔹 الآن يرسل كل 5 دقائق
   setInterval(async () => {
     await sendPage();
-  }, 10 * 60 * 1000);  // 10 دقائق = 600,000 ملي ثانية
+  }, 5 * 60 * 1000);  // 5 دقائق = 300,000 ملي ثانية
 });
 
-
 client.login(TOKEN);
-
-
