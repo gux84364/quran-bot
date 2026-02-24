@@ -15,7 +15,7 @@ const axios = require('axios');
 const sharp = require('sharp');  // مكتبة sharp لتحرير الصور
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
 const TOKEN = process.env.TOKEN;  // سيقرأ التوكن من Environment Variables
@@ -65,3 +65,4 @@ client.once('ready', () => {
 });
 
 client.login(TOKEN);
+
