@@ -40,12 +40,19 @@ async function sendPage() {
         responseType: 'arraybuffer'
       });
 
-      // ⭐ تحسين الخلفية لتكون بيضاء صافية مع الحفاظ على الجودة
+      // ⭐ إضافة حواف خضراء حول الصفحة
       const modifiedImage = await sharp(response.data)
-        .ensureAlpha() // يتأكد من قناة الشفافية
-        .flatten({ background: { r: 255, g: 255, b: 255 } }) // خلفية بيضاء حقيقية
-        .toColourspace('srgb') // ألوان طبيعية
-        .png({ quality: 100, compressionLevel: 9 }) // أعلى جودة
+        .ensureAlpha()
+        .flatten({ background: "#ffffff" }) // خلفية الصفحة بيضاء
+        .extend({
+          top: 30,      // حجم الحافة العلوية
+          bottom: 30,   // حجم الحافة السفلية
+          left: 30,     // حجم الحافة اليسرى
+          right: 30,    // حجم الحافة اليمنى
+          background: { r: 0, g: 128, b: 0 } // أخضر داكن مثل مصحف الملك فهد
+        })
+        .toColourspace('srgb')
+        .png({ quality: 100, compressionLevel: 0 })
         .toBuffer();
 
       const attachment = new AttachmentBuilder(modifiedImage, {
@@ -74,6 +81,7 @@ client.once('ready', async () => {
     await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
   }
 
+  // الإرسال كل 3 دقائق
   setInterval(async () => {
     await sendPage();
   }, 3 * 60 * 1000);
