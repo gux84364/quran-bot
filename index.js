@@ -1,7 +1,11 @@
 const express = require("express");
 const app = express();
 const fs = require("fs");
+const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
+const axios = require('axios');
+const sharp = require('sharp');
 
+// صفحة البداية للبوت
 app.get("/", (req, res) => {
   res.send("Bot is running");
 });
@@ -11,25 +15,23 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
-const axios = require('axios');
-const sharp = require('sharp');
-
+// إعدادات البوت
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
 const TOKEN = process.env.TOKEN;
 
+// القنوات اللي يرسل فيها البوت
 const CHANNELS = [
   "1473787601520693331",
   "1475990635763990578"
 ];
 
-// يبدأ من صفحة 266
+// يبدأ من الصفحة 266
 let currentPage = 266;
 
-// دالة لإرسال صفحة المصحف
+// دالة إرسال صفحة المصحف
 async function sendPage() {
   try {
     for (const id of CHANNELS) {
@@ -63,12 +65,13 @@ async function sendPage() {
   }
 }
 
-// دالة لإرسال حديث عشوائي
+// قراءة الأحاديث من الملف hadiths.json
 function getRandomHadith() {
   const hadiths = JSON.parse(fs.readFileSync('hadiths.json', 'utf8'));
   return hadiths[Math.floor(Math.random() * hadiths.length)];
 }
 
+// دالة إرسال حديث عشوائي
 async function sendHadith() {
   try {
     for (const id of CHANNELS) {
@@ -80,15 +83,20 @@ async function sendHadith() {
   }
 }
 
+// عند تشغيل البوت
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
+  // رسالة البداية في كل قناة
   for (const id of CHANNELS) {
     const channel = await client.channels.fetch(id);
     await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
   }
 
-  // الإرسال كل 2 دقائق لصفحات المصحف
+  // إرسال حديث فور التشغيل
+  await sendHadith();
+
+  // الإرسال كل 2 دقيقة لصفحات المصحف
   setInterval(async () => {
     await sendPage();
   }, 2 * 60 * 1000);
@@ -99,4 +107,5 @@ client.once('ready', async () => {
   }, 5 * 60 * 1000);
 });
 
+// تسجيل الدخول
 client.login(TOKEN);
