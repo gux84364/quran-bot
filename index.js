@@ -12,7 +12,6 @@ app.listen(PORT, () => {
 
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
-const sharp = require('sharp');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
@@ -25,7 +24,8 @@ const CHANNELS = [
   "1475990635763990578"
 ];
 
-let currentPage = 1;
+// ⭐ يبدأ من 255
+let currentPage = 255;
 
 async function sendPage() {
   try {
@@ -40,14 +40,8 @@ async function sendPage() {
         responseType: 'arraybuffer'
       });
 
-      // ⭐ تحسين الجودة هنا
-      const modifiedImage = await sharp(response.data)
-        .flatten({ background: { r: 255, g: 255, b: 255 } }) 
-        .sharpen()                    // زيادة وضوح الخط
-        .png({ quality: 100 })        // أعلى جودة ممكنة
-        .toBuffer();
-
-      const attachment = new AttachmentBuilder(modifiedImage, {
+      // ⭐ نرسل الصورة الأصلية بدون تعديل = أفضل جودة
+      const attachment = new AttachmentBuilder(response.data, {
         name: `page-${currentPage}.png`
       });
 
@@ -58,7 +52,9 @@ async function sendPage() {
     }
 
     currentPage++;
-    if (currentPage > 604) currentPage = 254;
+
+    // يرجع للبداية بعد 604
+    if (currentPage > 604) currentPage = 1;
 
   } catch (error) {
     console.error(error);
@@ -70,7 +66,7 @@ client.once('ready', async () => {
 
   for (const id of CHANNELS) {
     const channel = await client.channels.fetch(id);
-    await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
+    await channel.send(" بسم الله الرحمن الرحيم ");
   }
 
   setInterval(async () => {
