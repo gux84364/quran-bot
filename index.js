@@ -1,11 +1,9 @@
 const express = require("express");
 const app = express();
-const fs = require("fs");
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
 const sharp = require('sharp');
 
-// صفحة البداية للبوت
 app.get("/", (req, res) => {
   res.send("Bot is running");
 });
@@ -15,21 +13,19 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// إعدادات البوت
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
 const TOKEN = process.env.TOKEN;
 
-// القنوات اللي يرسل فيها البوت
 const CHANNELS = [
   "1473787601520693331",
   "1475990635763990578"
 ];
 
-// يبدأ من الصفحة 266
-let currentPage = 266;
+// يبدأ من الصفحة 276
+let currentPage = 276;
 
 // دالة إرسال صفحة المصحف
 async function sendPage() {
@@ -65,47 +61,31 @@ async function sendPage() {
   }
 }
 
-// قراءة الأحاديث من الملف hadiths.json
-function getRandomHadith() {
-  const hadiths = JSON.parse(fs.readFileSync('hadiths.json', 'utf8'));
-  return hadiths[Math.floor(Math.random() * hadiths.length)];
-}
+// ============================
+// الأحاديث معلقة مؤقتًا
+// ============================
+// const fs = require("fs");
+// function getRandomHadith() { ... }
+// async function sendHadith() { ... }
+// ============================
 
-// دالة إرسال حديث عشوائي
-async function sendHadith() {
-  try {
-    for (const id of CHANNELS) {
-      const channel = await client.channels.fetch(id);
-      await channel.send(`📜 حديث نبوي:\n${getRandomHadith()}`);
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// عند تشغيل البوت
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
-  // رسالة البداية في كل قناة
   for (const id of CHANNELS) {
     const channel = await client.channels.fetch(id);
     await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
   }
-
-  // إرسال حديث فور التشغيل
-  await sendHadith();
 
   // الإرسال كل 2 دقيقة لصفحات المصحف
   setInterval(async () => {
     await sendPage();
   }, 2 * 60 * 1000);
 
-  // الإرسال كل 5 دقائق للاحاديث
-  setInterval(async () => {
-    await sendHadith();
-  }, 5 * 60 * 1000);
+  // الإرسال كل 5 دقائق للاحاديث → معلقة مؤقتًا
+  // setInterval(async () => {
+  //   await sendHadith();
+  // }, 5 * 60 * 1000);
 });
 
-// تسجيل الدخول
 client.login(TOKEN);
