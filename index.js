@@ -12,7 +12,7 @@ app.listen(PORT, () => {
 
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
-const sharp = require('sharp'); // للتأكد من الخلفية البيضاء
+const sharp = require('sharp');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
@@ -25,7 +25,6 @@ const CHANNELS = [
   "1475990635763990578"
 ];
 
-// يبدأ من صفحة 255
 let currentPage = 255;
 
 async function sendPage() {
@@ -41,9 +40,12 @@ async function sendPage() {
         responseType: 'arraybuffer'
       });
 
-      // ⭐ جعل الخلفية بيضاء مع الحفاظ على الجودة
+      // ⭐ تحسين الخلفية لتكون بيضاء صافية مع الحفاظ على الجودة
       const modifiedImage = await sharp(response.data)
-        .flatten({ background: "#ffffff" }) // خلفية بيضاء
+        .ensureAlpha() // يتأكد من قناة الشفافية
+        .flatten({ background: { r: 255, g: 255, b: 255 } }) // خلفية بيضاء حقيقية
+        .toColourspace('srgb') // ألوان طبيعية
+        .png({ quality: 100, compressionLevel: 9 }) // أعلى جودة
         .toBuffer();
 
       const attachment = new AttachmentBuilder(modifiedImage, {
@@ -72,10 +74,9 @@ client.once('ready', async () => {
     await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
   }
 
-  // ⭐ الإرسال كل 3 دقائق
   setInterval(async () => {
     await sendPage();
-  }, 3 * 60 * 1000); // 3 دقائق
+  }, 3 * 60 * 1000);
 });
 
 client.login(TOKEN);
