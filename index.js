@@ -25,7 +25,8 @@ const CHANNELS = [
   "1475990635763990578"
 ];
 
-let currentPage = 255;
+// ⭐ يبدأ من صفحة 258
+let currentPage = 258;
 
 async function sendPage() {
   try {
@@ -40,17 +41,10 @@ async function sendPage() {
         responseType: 'arraybuffer'
       });
 
-      // ⭐ إضافة حواف خضراء حول الصفحة
+      // الصفحة نفسها تبقى بيضاء للنصوص بدون أي إطار
       const modifiedImage = await sharp(response.data)
         .ensureAlpha()
-        .flatten({ background: "#ffffff" }) // خلفية الصفحة بيضاء
-        .extend({
-          top: 30,      // حجم الحافة العلوية
-          bottom: 30,   // حجم الحافة السفلية
-          left: 30,     // حجم الحافة اليسرى
-          right: 30,    // حجم الحافة اليمنى
-          background: { r: 0, g: 128, b: 0 } // أخضر داكن مثل مصحف الملك فهد
-        })
+        .flatten({ background: "#ffffff" }) // خلفية بيضاء
         .toColourspace('srgb')
         .png({ quality: 100, compressionLevel: 0 })
         .toBuffer();
