@@ -12,6 +12,7 @@ app.listen(PORT, () => {
 
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
+const sharp = require('sharp'); // للتأكد من الخلفية البيضاء
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
@@ -24,7 +25,7 @@ const CHANNELS = [
   "1475990635763990578"
 ];
 
-// ⭐ يبدأ من 255
+// يبدأ من صفحة 255
 let currentPage = 255;
 
 async function sendPage() {
@@ -40,8 +41,12 @@ async function sendPage() {
         responseType: 'arraybuffer'
       });
 
-      // ⭐ نرسل الصورة الأصلية بدون تعديل = أفضل جودة
-      const attachment = new AttachmentBuilder(response.data, {
+      // ⭐ جعل الخلفية بيضاء مع الحفاظ على الجودة
+      const modifiedImage = await sharp(response.data)
+        .flatten({ background: "#ffffff" }) // خلفية بيضاء
+        .toBuffer();
+
+      const attachment = new AttachmentBuilder(modifiedImage, {
         name: `page-${currentPage}.png`
       });
 
@@ -52,8 +57,6 @@ async function sendPage() {
     }
 
     currentPage++;
-
-    // يرجع للبداية بعد 604
     if (currentPage > 604) currentPage = 1;
 
   } catch (error) {
@@ -66,12 +69,13 @@ client.once('ready', async () => {
 
   for (const id of CHANNELS) {
     const channel = await client.channels.fetch(id);
-    await channel.send(" بسم الله الرحمن الرحيم ");
+    await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
   }
 
+  // ⭐ الإرسال كل 3 دقائق
   setInterval(async () => {
     await sendPage();
-  }, 5 * 60 * 1000);
+  }, 3 * 60 * 1000); // 3 دقائق
 });
 
 client.login(TOKEN);
