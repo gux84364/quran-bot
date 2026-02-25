@@ -21,16 +21,16 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID; // ضع هنا ID البوت
-const GUILD_ID = process.env.GUILD_ID;   // ضع هنا ID السيرفر
+const TOKEN = process.env.TOKEN;      // توكن البوت
+const CLIENT_ID = "1473785704105509104"; // ID البوت
+const GUILD_ID = "1315040495453339718";  // ID السيرفر
 
 const CHANNELS = [
   "1473787601520693331",
   "1475990635763990578"
 ];
 
-let currentPage = 276; // الصفحة الحالية
+let currentPage = 276; // يبدأ من الصفحة 276 تلقائيًا
 let pageInterval = null; // لحفظ setInterval
 
 // دالة إرسال صفحة المصحف
@@ -119,6 +119,9 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+// ======================
+// بدء التشغيل التلقائي
+// ======================
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -126,6 +129,9 @@ client.once('ready', async () => {
     const channel = await client.channels.fetch(id);
     await channel.send("✅ البوت جاهز للتحكم في صفحات المصحف!");
   }
+
+  // يبدأ تلقائيًا من الصفحة 276
+  pageInterval = setInterval(sendPage, 2 * 60 * 1000); // كل 2 دقيقة
 });
 
 client.login(TOKEN);
