@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const fs = require("fs");
 
 app.get("/", (req, res) => {
   res.send("Bot is running");
@@ -25,26 +26,21 @@ const CHANNELS = [
   "1475990635763990578"
 ];
 
-// ⭐ يبدأ من صفحة 258
-let currentPage = 258;
+// يبدأ من صفحة 266
+let currentPage = 266;
 
+// دالة لإرسال صفحة المصحف
 async function sendPage() {
   try {
     for (const id of CHANNELS) {
       const channel = await client.channels.fetch(id);
 
       const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
+      const response = await axios({ url, method: 'GET', responseType: 'arraybuffer' });
 
-      const response = await axios({
-        url,
-        method: 'GET',
-        responseType: 'arraybuffer'
-      });
-
-      // الصفحة نفسها تبقى بيضاء للنصوص بدون أي إطار
       const modifiedImage = await sharp(response.data)
         .ensureAlpha()
-        .flatten({ background: "#ffffff" }) // خلفية بيضاء
+        .flatten({ background: "#ffffff" })
         .toColourspace('srgb')
         .png({ quality: 100, compressionLevel: 0 })
         .toBuffer();
@@ -67,6 +63,23 @@ async function sendPage() {
   }
 }
 
+// دالة لإرسال حديث عشوائي
+function getRandomHadith() {
+  const hadiths = JSON.parse(fs.readFileSync('hadiths.json', 'utf8'));
+  return hadiths[Math.floor(Math.random() * hadiths.length)];
+}
+
+async function sendHadith() {
+  try {
+    for (const id of CHANNELS) {
+      const channel = await client.channels.fetch(id);
+      await channel.send(`📜 حديث نبوي:\n${getRandomHadith()}`);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -75,10 +88,15 @@ client.once('ready', async () => {
     await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
   }
 
-  // الإرسال كل 3 دقائق
+  // الإرسال كل 2 دقائق لصفحات المصحف
   setInterval(async () => {
     await sendPage();
-  }, 3 * 60 * 1000);
+  }, 2 * 60 * 1000);
+
+  // الإرسال كل 5 دقائق للاحاديث
+  setInterval(async () => {
+    await sendHadith();
+  }, 5 * 60 * 1000);
 });
 
 client.login(TOKEN);
