@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
-const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, AttachmentBuilder, Routes } = require('discord.js');
+const { REST } = require('@discordjs/rest');
 const axios = require('axios');
 const sharp = require('sharp');
 
@@ -13,19 +14,24 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+// ======================
+// إعدادات البوت
+// ======================
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
 const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID; // ضع هنا ID البوت
+const GUILD_ID = process.env.GUILD_ID;   // ضع هنا ID السيرفر
 
 const CHANNELS = [
   "1473787601520693331",
   "1475990635763990578"
 ];
 
-// يبدأ من الصفحة 276
-let currentPage = 276;
+let currentPage = 276; // الصفحة الحالية
+let pageInterval = null; // لحفظ setInterval
 
 // دالة إرسال صفحة المصحف
 async function sendPage() {
@@ -61,31 +67,65 @@ async function sendPage() {
   }
 }
 
-// ============================
-// الأحاديث معلقة مؤقتًا
-// ============================
-// const fs = require("fs");
-// function getRandomHadith() { ... }
-// async function sendHadith() { ... }
-// ============================
+// ======================
+// تسجيل أوامر البوت بالعربي
+// ======================
+const commands = [
+  {
+    name: 'ابدأ_الصفحات',
+    description: 'يبدأ إرسال صفحات المصحف من الصفحة 1 تلقائيًا'
+  },
+  {
+    name: 'أوقف_الصفحات',
+    description: 'يوقف إرسال صفحات المصحف مؤقتًا'
+  }
+];
+
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+(async () => {
+  try {
+    console.log('🔹 تسجيل أوامر البوت...');
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+    console.log('✅ تم تسجيل الأوامر!');
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
+// ======================
+// التعامل مع أوامر البوت
+// ======================
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isCommand()) return;
+
+  if (interaction.commandName === 'ابدأ_الصفحات') {
+    currentPage = 1;
+    if (pageInterval) clearInterval(pageInterval);
+    pageInterval = setInterval(sendPage, 2 * 60 * 1000); // كل 2 دقيقة
+    await interaction.reply("✅ بدأ إرسال صفحات المصحف من الصفحة 1!");
+  }
+
+  if (interaction.commandName === 'أوقف_الصفحات') {
+    if (pageInterval) {
+      clearInterval(pageInterval);
+      pageInterval = null;
+      await interaction.reply("⏹️ تم إيقاف إرسال صفحات المصحف مؤقتًا!");
+    } else {
+      await interaction.reply("⚠️ لم يكن هناك إرسال صفحات شغال.");
+    }
+  }
+});
 
 client.once('ready', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
   for (const id of CHANNELS) {
     const channel = await client.channels.fetch(id);
-    await channel.send("✅ البوت بدأ يعمل بنجاح في هذه القناة!");
+    await channel.send("✅ البوت جاهز للتحكم في صفحات المصحف!");
   }
-
-  // الإرسال كل 2 دقيقة لصفحات المصحف
-  setInterval(async () => {
-    await sendPage();
-  }, 2 * 60 * 1000);
-
-  // الإرسال كل 5 دقائق للاحاديث → معلقة مؤقتًا
-  // setInterval(async () => {
-  //   await sendHadith();
-  // }, 5 * 60 * 1000);
 });
 
 client.login(TOKEN);
