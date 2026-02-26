@@ -21,8 +21,7 @@ app.listen(PORT, () => {
 // إعدادات البوت
 // ======================
 const TOKEN = process.env.TOKEN;      
-const CLIENT_ID = "1473785704105509104"; // ID البوت
-const GUILD_ID = "1315040495453339718";  // ID السيرفر
+const CLIENT_ID = process.env.CLIENT_ID; // ضع TOKEN و CLIENT_ID في Environment Variables
 
 const CHANNELS = [
   "1473787601520693331",
@@ -76,7 +75,7 @@ async function sendPage() {
 }
 
 // ======================
-// تسجيل أوامر البوت بالعربي
+// أوامر البوت بالعربي
 // ======================
 const commands = [
   {
@@ -101,25 +100,45 @@ const commands = [
   }
 ];
 
+// ======================
+// تسجيل أوامر كل السيرفرات تلقائيًا عند جاهزية البوت
+// ======================
 const rest = new REST({ version: '10' }).setToken(TOKEN);
-(async () => {
-  try {
-    console.log('🔹 تسجيل أوامر البوت...');
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-      { body: commands }
-    );
-    console.log('✅ تم تسجيل الأوامر!');
-  } catch (error) {
-    console.error(error);
+
+client.once('ready', async () => {
+  console.log(`Logged in as ${client.user.tag}`);
+
+  // إرسال رسالة جاهزية لكل قناة
+  for (const id of CHANNELS) {
+    const channel = await client.channels.fetch(id);
+    await channel.send("✅ البوت جاهز للتحكم في صفحات المصحف!");
   }
-})();
+
+  // ✅ يبدأ تلقائيًا من الصفحة 276
+  pageInterval = setInterval(sendPage, 2 * 60 * 1000);
+
+  // تسجيل الأوامر لكل سيرفر البوت موجود فيه
+  const guilds = client.guilds.cache.map(g => g.id);
+  for (const guildId of guilds) {
+    try {
+      await rest.put(
+        Routes.applicationGuildCommands(CLIENT_ID, guildId),
+        { body: commands }
+      );
+      console.log(`✅ تم تسجيل الأوامر في السيرفر: ${guildId}`);
+    } catch (err) {
+      console.error(`❌ خطأ تسجيل أوامر في السيرفر: ${guildId}`, err);
+    }
+  }
+});
 
 // ======================
 // التعامل مع أوامر البوت
 // ======================
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
+
+  // كل سيرفر مستقل، كل تفاعل يتعامل مع سيرفره فقط
 
   if (interaction.commandName === 'ابدأ_الصفحات') {
     currentPage = 1;
@@ -148,21 +167,6 @@ client.on('interactionCreate', async interaction => {
     pageInterval = setInterval(sendPage, 2 * 60 * 1000);
     await interaction.reply(`✅ بدأ إرسال صفحات المصحف من الصفحة ${pageNum}!`);
   }
-});
-
-// ======================
-// بدء التشغيل التلقائي
-// ======================
-client.once('ready', async () => {
-  console.log(`Logged in as ${client.user.tag}`);
-
-  for (const id of CHANNELS) {
-    const channel = await client.channels.fetch(id);
-    await channel.send("✅ البوت جاهز للتحكم في صفحات المصحف!");
-  }
-
-  // يبدأ تلقائيًا من الصفحة 276
-  pageInterval = setInterval(sendPage, 2 * 60 * 1000);
 });
 
 // ======================
