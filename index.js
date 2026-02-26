@@ -43,12 +43,7 @@ async function sendPage(guildId) {
     }
 
     const url = `https://quran.ksu.edu.sa/png_big/${session.currentPage}.png`;
-
-    const response = await axios({
-      url,
-      method: "GET",
-      responseType: "arraybuffer"
-    });
+    const response = await axios({ url, method: "GET", responseType: "arraybuffer" });
 
     const modifiedImage = await sharp(response.data)
       .ensureAlpha()
@@ -60,10 +55,7 @@ async function sendPage(guildId) {
       name: `page-${session.currentPage}.png`
     });
 
-    await channel.send({
-      content: `📖 صفحة ${session.currentPage}`,
-      files: [attachment]
-    });
+    await channel.send({ content: `📖 صفحة ${session.currentPage}`, files: [attachment] });
 
     session.currentPage++;
     if (session.currentPage > 604) session.currentPage = 1;
@@ -83,12 +75,7 @@ const globalCommands = [
     name: "ابدأ_من",
     description: "يبدأ من صفحة محددة",
     options: [
-      {
-        name: "رقم_الصفحة",
-        type: 4,
-        description: "أدخل رقم الصفحة من 1 إلى 604",
-        required: true
-      }
+      { name: "رقم_الصفحة", type: 4, description: "أدخل رقم الصفحة من 1 إلى 604", required: true }
     ]
   }
 ];
@@ -112,16 +99,24 @@ client.once("clientReady", async () => {
 });
 
 // ======================
-// التعامل مع الأوامر
+// التعامل مع الأوامر (صاحب السيرفر فقط)
 // ======================
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const guildId = interaction.guildId;
 
+  // ===== تحقق من صاحب السيرفر =====
+  const guild = await interaction.guild.fetch();
+  if (interaction.user.id !== guild.ownerId) {
+    return interaction.reply({
+      content: "❌ فقط صاحب السيرفر يقدر يتحكم بالبوت.",
+      ephemeral: true
+    });
+  }
+
   // ===== بدء من 1 =====
   if (interaction.commandName === "ابدأ_الصفحات") {
-
     if (guildSessions.has(guildId))
       return interaction.reply({ content: "⚠️ الإرسال شغال بالفعل.", ephemeral: true });
 
@@ -134,9 +129,7 @@ client.on("interactionCreate", async interaction => {
     await sendPage(guildId);
 
     const interval = setInterval(() => {
-      if (guildSessions.has(guildId)) {
-        sendPage(guildId);
-      }
+      if (guildSessions.has(guildId)) sendPage(guildId);
     }, 2 * 60 * 1000);
 
     guildSessions.get(guildId).interval = interval;
@@ -146,7 +139,6 @@ client.on("interactionCreate", async interaction => {
 
   // ===== إيقاف =====
   if (interaction.commandName === "أوقف_الصفحات") {
-
     const session = guildSessions.get(guildId);
     if (!session)
       return interaction.reply({ content: "⚠️ لا يوجد إرسال شغال.", ephemeral: true });
@@ -159,12 +151,10 @@ client.on("interactionCreate", async interaction => {
 
   // ===== بدء من رقم معين =====
   if (interaction.commandName === "ابدأ_من") {
-
     if (guildSessions.has(guildId))
       return interaction.reply({ content: "⚠️ أوقف الإرسال الحالي أولاً.", ephemeral: true });
 
     const pageNum = interaction.options.getInteger("رقم_الصفحة");
-
     if (pageNum < 1 || pageNum > 604)
       return interaction.reply({ content: "⚠️ الصفحات من 1 إلى 604 فقط.", ephemeral: true });
 
@@ -177,9 +167,7 @@ client.on("interactionCreate", async interaction => {
     await sendPage(guildId);
 
     const interval = setInterval(() => {
-      if (guildSessions.has(guildId)) {
-        sendPage(guildId);
-      }
+      if (guildSessions.has(guildId)) sendPage(guildId);
     }, 2 * 60 * 1000);
 
     guildSessions.get(guildId).interval = interval;
