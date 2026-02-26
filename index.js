@@ -8,14 +8,10 @@ const sharp = require('sharp');
 // ======================
 // سيرفر Express لتأكيد تشغيل البوت
 // ======================
-app.get("/", (req, res) => {
-  res.send("Bot is running");
-});
+app.get("/", (req, res) => res.send("Bot is running"));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // ======================
 // إعدادات البوت
@@ -23,6 +19,7 @@ app.listen(PORT, () => {
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
+// قائمة القنوات التي يرسل لها البوت
 const CHANNELS = [
   "1473787601520693331",
   "1475990635763990578"
@@ -45,7 +42,6 @@ async function sendPage() {
   try {
     for (const id of CHANNELS) {
       const channel = await client.channels.fetch(id);
-
       const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
       const response = await axios({ url, method: 'GET', responseType: 'arraybuffer' });
 
@@ -56,14 +52,8 @@ async function sendPage() {
         .png({ quality: 100, compressionLevel: 0 })
         .toBuffer();
 
-      const attachment = new AttachmentBuilder(modifiedImage, {
-        name: `page-${currentPage}.png`
-      });
-
-      await channel.send({
-        content: `📖 صفحة ${currentPage}`,
-        files: [attachment]
-      });
+      const attachment = new AttachmentBuilder(modifiedImage, { name: `page-${currentPage}.png` });
+      await channel.send({ content: `📖 صفحة ${currentPage}`, files: [attachment] });
     }
 
     currentPage++;
@@ -78,42 +68,31 @@ async function sendPage() {
 // أوامر البوت بالعربي
 // ======================
 const commands = [
-  {
-    name: 'ابدأ_الصفحات',
-    description: 'يبدأ إرسال صفحات المصحف من الصفحة 1 تلقائيًا'
-  },
-  {
-    name: 'أوقف_الصفحات',
-    description: 'يوقف إرسال صفحات المصحف مؤقتًا'
-  },
+  { name: 'ابدأ_الصفحات', description: 'يبدأ إرسال صفحات المصحف من الصفحة 1 تلقائيًا' },
+  { name: 'أوقف_الصفحات', description: 'يوقف إرسال صفحات المصحف مؤقتًا' },
   {
     name: 'ابدأ_من',
     description: 'يبدأ إرسال الصفحات من رقم محدد',
     options: [
-      {
-        name: 'رقم_الصفحة',
-        type: 4, // Integer
-        description: 'أدخل رقم الصفحة التي تريد البدء منها',
-        required: true
-      }
+      { name: 'رقم_الصفحة', type: 4, description: 'أدخل رقم الصفحة التي تريد البدء منها', required: true }
     ]
   }
 ];
 
 // ======================
-// تسجيل الأوامر عند التشغيل وأي سيرفر جديد
+// تسجيل الأوامر لكل سيرفر محدد
 // ======================
 const rest = new REST({ version: '10' }).setToken(TOKEN);
+const guildIds = ["1315040495453339718", "1316505661701492816"];
 
-async function registerCommands(guildId) {
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(CLIENT_ID, guildId),
-      { body: commands }
-    );
-    console.log(`✅ تم تسجيل الأوامر في السيرفر: ${guildId}`);
-  } catch (err) {
-    console.error(`❌ خطأ تسجيل أوامر في السيرفر: ${guildId}`, err);
+async function registerCommands() {
+  for (const guildId of guildIds) {
+    try {
+      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, guildId), { body: commands });
+      console.log(`✅ تم تسجيل الأوامر في السيرفر: ${guildId}`);
+    } catch (err) {
+      console.error(`❌ خطأ تسجيل الأوامر في السيرفر: ${guildId}`, err);
+    }
   }
 }
 
@@ -132,18 +111,8 @@ client.once('ready', async () => {
   // يبدأ تلقائيًا من الصفحة 276
   pageInterval = setInterval(sendPage, 2 * 60 * 1000);
 
-  // تسجيل الأوامر لكل سيرفر موجود في الكاش
-  const guilds = client.guilds.cache.map(g => g.id);
-  for (const guildId of guilds) {
-    await registerCommands(guildId);
-  }
-});
-
-// ======================
-// تسجيل أوامر للسيرفر الجديد عند الانضمام
-// ======================
-client.on('guildCreate', async guild => {
-  await registerCommands(guild.id);
+  // تسجيل الأوامر لكل سيرفر محدد
+  await registerCommands();
 });
 
 // ======================
@@ -152,7 +121,6 @@ client.on('guildCreate', async guild => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
-  // كل سيرفر مستقل
   if (interaction.commandName === 'ابدأ_الصفحات') {
     currentPage = 1;
     if (pageInterval) clearInterval(pageInterval);
@@ -172,9 +140,7 @@ client.on('interactionCreate', async interaction => {
 
   if (interaction.commandName === 'ابدأ_من') {
     const pageNum = interaction.options.getInteger('رقم_الصفحة');
-    if (pageNum < 1 || pageNum > 604) {
-      return interaction.reply("⚠️ رقم الصفحة غير صالح. الصفحات من 1 إلى 604.");
-    }
+    if (pageNum < 1 || pageNum > 604) return interaction.reply("⚠️ رقم الصفحة غير صالح. الصفحات من 1 إلى 604.");
     currentPage = pageNum;
     if (pageInterval) clearInterval(pageInterval);
     pageInterval = setInterval(sendPage, 2 * 60 * 1000);
