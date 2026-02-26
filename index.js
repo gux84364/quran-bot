@@ -18,7 +18,6 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
-// لكل سيرفر نخزن بياناته هنا
 const guildSessions = new Map();
 
 // ======================
@@ -36,8 +35,12 @@ async function sendPage(guildId) {
   if (!session) return;
 
   try {
-    const channel = await client.channels.fetch(session.channelId);
-    if (!channel) return;
+    const channel = await client.channels.fetch(session.channelId).catch(() => null);
+    if (!channel) {
+      clearInterval(session.interval);
+      guildSessions.delete(guildId);
+      return;
+    }
 
     const url = `https://quran.ksu.edu.sa/png_big/${session.currentPage}.png`;
 
@@ -71,9 +74,9 @@ async function sendPage(guildId) {
 }
 
 // ======================
-// أوامر البوت
+// الأوامر العالمية
 // ======================
-const commands = [
+const globalCommands = [
   { name: "ابدأ_الصفحات", description: "يبدأ إرسال الصفحات من الصفحة 1" },
   { name: "أوقف_الصفحات", description: "يوقف إرسال الصفحات" },
   {
@@ -83,7 +86,7 @@ const commands = [
       {
         name: "رقم_الصفحة",
         type: 4,
-        description: "رقم الصفحة من 1 إلى 604",
+        description: "أدخل رقم الصفحة من 1 إلى 604",
         required: true
       }
     ]
@@ -93,15 +96,15 @@ const commands = [
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 async function registerCommands() {
-  await rest.put(
-    Routes.applicationCommands(CLIENT_ID),
-    { body: commands }
-  );
-  console.log("✅ تم تسجيل الأوامر عالميًا");
+  await rest.put(Routes.applicationCommands(CLIENT_ID), { body: [] });
+  console.log("🧹 تم حذف الأوامر القديمة");
+
+  await rest.put(Routes.applicationCommands(CLIENT_ID), { body: globalCommands });
+  console.log("✅ تم تسجيل الأوامر الجديدة عالميًا");
 }
 
 // ======================
-// عند جاهزية البوت
+// جاهزية البوت
 // ======================
 client.once("clientReady", async () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -120,7 +123,7 @@ client.on("interactionCreate", async interaction => {
   if (interaction.commandName === "ابدأ_الصفحات") {
 
     if (guildSessions.has(guildId))
-      return interaction.reply("⚠️ الإرسال شغال بالفعل في هذا السيرفر.");
+      return interaction.reply({ content: "⚠️ الإرسال شغال بالفعل.", ephemeral: true });
 
     guildSessions.set(guildId, {
       currentPage: 1,
@@ -131,7 +134,9 @@ client.on("interactionCreate", async interaction => {
     await sendPage(guildId);
 
     const interval = setInterval(() => {
-      sendPage(guildId);
+      if (guildSessions.has(guildId)) {
+        sendPage(guildId);
+      }
     }, 2 * 60 * 1000);
 
     guildSessions.get(guildId).interval = interval;
@@ -144,7 +149,7 @@ client.on("interactionCreate", async interaction => {
 
     const session = guildSessions.get(guildId);
     if (!session)
-      return interaction.reply("⚠️ لا يوجد إرسال شغال في هذا السيرفر.");
+      return interaction.reply({ content: "⚠️ لا يوجد إرسال شغال.", ephemeral: true });
 
     clearInterval(session.interval);
     guildSessions.delete(guildId);
@@ -156,12 +161,12 @@ client.on("interactionCreate", async interaction => {
   if (interaction.commandName === "ابدأ_من") {
 
     if (guildSessions.has(guildId))
-      return interaction.reply("⚠️ أوقف الإرسال الحالي أولاً.");
+      return interaction.reply({ content: "⚠️ أوقف الإرسال الحالي أولاً.", ephemeral: true });
 
     const pageNum = interaction.options.getInteger("رقم_الصفحة");
 
     if (pageNum < 1 || pageNum > 604)
-      return interaction.reply("⚠️ الصفحات من 1 إلى 604 فقط.");
+      return interaction.reply({ content: "⚠️ الصفحات من 1 إلى 604 فقط.", ephemeral: true });
 
     guildSessions.set(guildId, {
       currentPage: pageNum,
@@ -172,7 +177,9 @@ client.on("interactionCreate", async interaction => {
     await sendPage(guildId);
 
     const interval = setInterval(() => {
-      sendPage(guildId);
+      if (guildSessions.has(guildId)) {
+        sendPage(guildId);
+      }
     }, 2 * 60 * 1000);
 
     guildSessions.get(guildId).interval = interval;
