@@ -60,17 +60,23 @@ async function sendPage() {
   }
 
   currentPage++;
-  if (currentPage > 604) currentPage = 1; // لو وصل لآخر صفحة يرجع للصفحة 1
+  if (currentPage > 604) {
+    clearInterval(pageInterval); // إذا وصل آخر صفحة يوقف البوت عن الإرسال
+    console.log("✅ تم إرسال كل صفحات القرآن.");
+  }
 }
 
 // ======================
 // جاهزية البوت
 // ======================
-client.once("ready", () => {
+client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
-  // يبدأ الإرسال تلقائيًا كل دقيقة
-  pageInterval = setInterval(sendPage, 60 * 1000);
+  // يبدأ الإرسال مباشرة من الصفحة 1
+  await sendPage();
+
+  // ثم يستمر كل 10 دقائق
+  pageInterval = setInterval(sendPage, 10 * 60 * 1000);
 });
 
 // ======================
