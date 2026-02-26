@@ -1,9 +1,9 @@
 const express = require("express");
 const app = express();
-const { Client, GatewayIntentBits, AttachmentBuilder, Routes } = require('discord.js');
-const { REST } = require('@discordjs/rest');
-const axios = require('axios');
-const sharp = require('sharp');
+const { Client, GatewayIntentBits, AttachmentBuilder, Routes } = require("discord.js");
+const { REST } = require("@discordjs/rest");
+const axios = require("axios");
+const sharp = require("sharp");
 
 // ======================
 // سيرفر Express
@@ -18,13 +18,8 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
-const CHANNELS = [
-  "1473787601520693331",
-  "1475990635763990578"
-];
-
-let currentPage = 1;
-let pageInterval = null;
+// لكل سيرفر نخزن بياناته هنا
+const guildSessions = new Map();
 
 // ======================
 // تعريف البوت
@@ -36,40 +31,42 @@ const client = new Client({
 // ======================
 // دالة إرسال صفحة
 // ======================
-async function sendPage() {
+async function sendPage(guildId) {
+  const session = guildSessions.get(guildId);
+  if (!session) return;
+
   try {
-    for (const id of CHANNELS) {
-      const channel = await client.channels.fetch(id);
-      if (!channel) continue;
+    const channel = await client.channels.fetch(session.channelId);
+    if (!channel) return;
 
-      const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
-      const response = await axios({
-        url,
-        method: 'GET',
-        responseType: 'arraybuffer'
-      });
+    const url = `https://quran.ksu.edu.sa/png_big/${session.currentPage}.png`;
 
-      const modifiedImage = await sharp(response.data)
-        .ensureAlpha()
-        .flatten({ background: "#ffffff" })
-        .png()
-        .toBuffer();
+    const response = await axios({
+      url,
+      method: "GET",
+      responseType: "arraybuffer"
+    });
 
-      const attachment = new AttachmentBuilder(modifiedImage, {
-        name: `page-${currentPage}.png`
-      });
+    const modifiedImage = await sharp(response.data)
+      .ensureAlpha()
+      .flatten({ background: "#ffffff" })
+      .png()
+      .toBuffer();
 
-      await channel.send({
-        content: `📖 صفحة ${currentPage}`,
-        files: [attachment]
-      });
-    }
+    const attachment = new AttachmentBuilder(modifiedImage, {
+      name: `page-${session.currentPage}.png`
+    });
 
-    currentPage++;
-    if (currentPage > 604) currentPage = 1;
+    await channel.send({
+      content: `📖 صفحة ${session.currentPage}`,
+      files: [attachment]
+    });
 
-  } catch (error) {
-    console.error("خطأ أثناء الإرسال:", error);
+    session.currentPage++;
+    if (session.currentPage > 604) session.currentPage = 1;
+
+  } catch (err) {
+    console.error("خطأ إرسال الصفحة:", err);
   }
 }
 
@@ -77,109 +74,116 @@ async function sendPage() {
 // أوامر البوت
 // ======================
 const commands = [
-  { name: 'ابدأ_الصفحات', description: 'يبدأ إرسال الصفحات من الصفحة 1' },
-  { name: 'أوقف_الصفحات', description: 'يوقف إرسال الصفحات' },
+  { name: "ابدأ_الصفحات", description: "يبدأ إرسال الصفحات من الصفحة 1" },
+  { name: "أوقف_الصفحات", description: "يوقف إرسال الصفحات" },
   {
-    name: 'ابدأ_من',
-    description: 'يبدأ من صفحة محددة',
+    name: "ابدأ_من",
+    description: "يبدأ من صفحة محددة",
     options: [
       {
-        name: 'رقم_الصفحة',
+        name: "رقم_الصفحة",
         type: 4,
-        description: 'رقم الصفحة من 1 إلى 604',
+        description: "رقم الصفحة من 1 إلى 604",
         required: true
       }
     ]
   }
 ];
 
-// ======================
-// تسجيل الأوامر
-// ======================
-const rest = new REST({ version: '10' }).setToken(TOKEN);
-const guildIds = ["1315040495453339718", "1316505661701492816"];
+const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 async function registerCommands() {
-  for (const guildId of guildIds) {
-    try {
-      await rest.put(
-        Routes.applicationGuildCommands(CLIENT_ID, guildId),
-        { body: commands }
-      );
-      console.log(`✅ تم تسجيل الأوامر في السيرفر: ${guildId}`);
-    } catch (err) {
-      console.error(err);
-    }
-  }
+  await rest.put(
+    Routes.applicationCommands(CLIENT_ID),
+    { body: commands }
+  );
+  console.log("✅ تم تسجيل الأوامر عالميًا");
 }
 
 // ======================
 // عند جاهزية البوت
 // ======================
-client.once('ready', async () => {
+client.once("clientReady", async () => {
   console.log(`Logged in as ${client.user.tag}`);
-
-  for (const id of CHANNELS) {
-    const channel = await client.channels.fetch(id);
-    if (channel) {
-      await channel.send("✅ البوت جاهز للتحكم في صفحات المصحف!");
-    }
-  }
-
   await registerCommands();
 });
 
 // ======================
 // التعامل مع الأوامر
 // ======================
-client.on('interactionCreate', async interaction => {
+client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
+  const guildId = interaction.guildId;
+
   // ===== بدء من 1 =====
-  if (interaction.commandName === 'ابدأ_الصفحات') {
+  if (interaction.commandName === "ابدأ_الصفحات") {
 
-    if (pageInterval)
-      return interaction.reply("⚠️ الإرسال شغال بالفعل.");
+    if (guildSessions.has(guildId))
+      return interaction.reply("⚠️ الإرسال شغال بالفعل في هذا السيرفر.");
 
-    currentPage = 1;
+    guildSessions.set(guildId, {
+      currentPage: 1,
+      channelId: interaction.channelId,
+      interval: null
+    });
 
-    await sendPage(); // يرسل فورًا
-    pageInterval = setInterval(sendPage, 2 * 60 * 1000);
+    await sendPage(guildId);
 
-    await interaction.reply("✅ بدأ الإرسال من الصفحة 1.");
+    const interval = setInterval(() => {
+      sendPage(guildId);
+    }, 2 * 60 * 1000);
+
+    guildSessions.get(guildId).interval = interval;
+
+    return interaction.reply("✅ بدأ الإرسال من الصفحة 1.");
   }
 
   // ===== إيقاف =====
-  if (interaction.commandName === 'أوقف_الصفحات') {
+  if (interaction.commandName === "أوقف_الصفحات") {
 
-    if (!pageInterval)
-      return interaction.reply("⚠️ لا يوجد إرسال شغال.");
+    const session = guildSessions.get(guildId);
+    if (!session)
+      return interaction.reply("⚠️ لا يوجد إرسال شغال في هذا السيرفر.");
 
-    clearInterval(pageInterval);
-    pageInterval = null;
+    clearInterval(session.interval);
+    guildSessions.delete(guildId);
 
-    await interaction.reply("⏹️ تم إيقاف الإرسال.");
+    return interaction.reply("⏹️ تم إيقاف الإرسال.");
   }
 
   // ===== بدء من رقم معين =====
-  if (interaction.commandName === 'ابدأ_من') {
+  if (interaction.commandName === "ابدأ_من") {
 
-    if (pageInterval)
+    if (guildSessions.has(guildId))
       return interaction.reply("⚠️ أوقف الإرسال الحالي أولاً.");
 
-    const pageNum = interaction.options.getInteger('رقم_الصفحة');
+    const pageNum = interaction.options.getInteger("رقم_الصفحة");
 
     if (pageNum < 1 || pageNum > 604)
       return interaction.reply("⚠️ الصفحات من 1 إلى 604 فقط.");
 
-    currentPage = pageNum;
+    guildSessions.set(guildId, {
+      currentPage: pageNum,
+      channelId: interaction.channelId,
+      interval: null
+    });
 
-    await sendPage(); // يرسل فورًا
-    pageInterval = setInterval(sendPage, 2 * 60 * 1000);
+    await sendPage(guildId);
 
-    await interaction.reply(`✅ بدأ الإرسال من الصفحة ${pageNum}.`);
+    const interval = setInterval(() => {
+      sendPage(guildId);
+    }, 2 * 60 * 1000);
+
+    guildSessions.get(guildId).interval = interval;
+
+    return interaction.reply(`✅ بدأ الإرسال من الصفحة ${pageNum}.`);
   }
 });
 
 // ======================
+process.on("unhandledRejection", error => {
+  console.error("Unhandled promise rejection:", error);
+});
+
 client.login(TOKEN);
