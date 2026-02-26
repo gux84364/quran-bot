@@ -16,13 +16,13 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // ======================
 const TOKEN = process.env.TOKEN;
 
-// هنا تحط القنوات اللي البوت يرسل فيها الصفحات
+// القنوات التي سيرسل لها البوت
 const CHANNELS = [
   "1473787601520693331",
   "1475990635763990578"
 ];
 
-let currentPage = 2; // يبدأ من الصفحة 2 تلقائيًا
+let currentPage = 1; // يبدأ من الصفحة 1
 let pageInterval = null;
 
 // ======================
@@ -60,7 +60,7 @@ async function sendPage() {
   }
 
   currentPage++;
-  if (currentPage > 604) currentPage = 1;
+  if (currentPage > 604) currentPage = 1; // لو وصل لآخر صفحة يرجع للصفحة 1
 }
 
 // ======================
@@ -69,8 +69,8 @@ async function sendPage() {
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 
-  // يبدأ الإرسال تلقائيًا
-  pageInterval = setInterval(sendPage, 2 * 60 * 1000); // كل دقيقتين
+  // يبدأ الإرسال تلقائيًا كل دقيقة
+  pageInterval = setInterval(sendPage, 60 * 1000);
 });
 
 // ======================
