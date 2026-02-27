@@ -23,12 +23,6 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-// القنوات التي سيرسل لها البوت
-const CHANNELS = [
-  "1473787601520693331",
-  "1475990635763990578"
-];
-
 let currentPage = 1;
 let pageInterval = null;
 
@@ -38,23 +32,28 @@ let pageInterval = null;
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildMessages
   ]
 });
 
 // ======================
-// دالة إرسال صفحة
+// دالة إرسال صفحة لأي سيرفر
 // ======================
 async function sendPage() {
   try {
-    for (const channelId of CHANNELS) {
+    // لكل السيرفرات اللي البوت موجود فيها
+    for (const guild of client.guilds.cache.values()) {
 
-      const channel = await client.channels.fetch(channelId);
+      // أول قناة البوت يقدر يرسل فيها
+      const channel = guild.channels.cache.find(
+        ch =>
+          ch.isTextBased() &&
+          ch.permissionsFor(guild.members.me).has(["SendMessages", "AttachFiles"])
+      );
+
       if (!channel) continue;
 
       const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
-
       const response = await axios({
         url,
         method: "GET",
@@ -62,20 +61,15 @@ async function sendPage() {
         timeout: 15000
       });
 
-      const modifiedImage = await sharp(response.data)
-        .png()
-        .toBuffer();
-
-      const attachment = new AttachmentBuilder(modifiedImage, {
-        name: `page-${currentPage}.png`
-      });
+      const modifiedImage = await sharp(response.data).png().toBuffer();
+      const attachment = new AttachmentBuilder(modifiedImage, { name: `page-${currentPage}.png` });
 
       await channel.send({
         content: `📖 صفحة ${currentPage}`,
         files: [attachment]
       });
 
-      console.log(`✅ تم إرسال الصفحة ${currentPage} إلى ${channelId}`);
+      console.log(`✅ تم إرسال الصفحة ${currentPage} إلى سيرفر: ${guild.name}`);
     }
 
     currentPage++;
