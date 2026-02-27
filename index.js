@@ -1,4 +1,3 @@
-console.log("TOKEN LENGTH:", TOKEN ? TOKEN.length : "undefined");
 const express = require("express");
 const app = express();
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
@@ -16,6 +15,8 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // إعدادات البوت
 // ======================
 const TOKEN = process.env.TOKEN;
+
+console.log("TOKEN LENGTH:", TOKEN ? TOKEN.length : "undefined"); // الآن بعد التعريف
 
 if (!TOKEN) {
   console.error("❌ TOKEN غير موجود في Environment Variables");
@@ -78,7 +79,6 @@ async function sendPage() {
     }
 
     currentPage++;
-
     if (currentPage > 604) {
       currentPage = 1; // يرجع للبداية بدل ما يوقف
       console.log("🔁 إعادة من الصفحة 1");
@@ -113,5 +113,3 @@ client.login(TOKEN)
     console.error("❌ فشل تسجيل الدخول:", err);
     process.exit(1);
   });
-
-
