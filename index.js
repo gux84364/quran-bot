@@ -1,5 +1,8 @@
-const express = require("express");
+// ======================
+// مكتبات
+// ======================
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
+const express = require("express");
 const axios = require("axios");
 const sharp = require("sharp");
 
@@ -19,7 +22,6 @@ if (!TOKEN) {
   console.error("❌ TOKEN غير موجود في Environment Variables");
   process.exit(1);
 }
-
 console.log("TOKEN LENGTH:", TOKEN.length);
 
 let currentPage = 1;
@@ -40,14 +42,23 @@ const client = new Client({
 // ======================
 async function sendPage() {
   try {
+    if (client.guilds.cache.size === 0) {
+      console.warn("⚠️ البوت غير موجود في أي سيرفر");
+      return;
+    }
+
     for (const guild of client.guilds.cache.values()) {
+      // البحث عن أول قناة يقدر البوت يرسل فيها
       const channel = guild.channels.cache.find(
         ch =>
           ch.isTextBased() &&
           ch.permissionsFor(guild.members.me).has(["SendMessages", "AttachFiles"])
       );
 
-      if (!channel) continue;
+      if (!channel) {
+        console.warn(`⚠️ لا توجد قناة صالحة في سيرفر: ${guild.name}`);
+        continue;
+      }
 
       const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
       const response = await axios({
@@ -84,8 +95,10 @@ async function sendPage() {
 // ======================
 client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
+  console.log(`📌 البوت موجود في ${client.guilds.cache.size} سيرفرات`);
+
   await sendPage();
-  pageInterval = setInterval(sendPage, 10 * 60 * 1000);
+  pageInterval = setInterval(sendPage, 10 * 60 * 1000); // كل 10 دقائق
 });
 
 // ======================
