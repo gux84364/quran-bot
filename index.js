@@ -1,8 +1,5 @@
-// ======================
-// مكتبات
-// ======================
-const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
 const express = require("express");
+const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
 const axios = require("axios");
 const sharp = require("sharp");
 
@@ -38,46 +35,25 @@ const client = new Client({
 });
 
 // ======================
-// دالة إرسال صفحة لأي سيرفر
+// دالة إرسال صفحة للقناة المحددة
 // ======================
+const CHANNEL_ID = "1473787601520693331"; // القناة اللي أرسلتها
+
 async function sendPage() {
   try {
-    if (client.guilds.cache.size === 0) {
-      console.warn("⚠️ البوت غير موجود في أي سيرفر");
+    const channel = await client.channels.fetch(CHANNEL_ID);
+    if (!channel || !channel.permissionsFor(channel.guild.members.me).has(["SendMessages", "AttachFiles"])) {
+      console.warn("⚠️ لا توجد قناة صالحة للإرسال أو البوت لا يملك صلاحيات كافية");
       return;
     }
 
-    for (const guild of client.guilds.cache.values()) {
-      // البحث عن أول قناة يقدر البوت يرسل فيها
-      const channel = guild.channels.cache.find(
-        ch =>
-          ch.isTextBased() &&
-          ch.permissionsFor(guild.members.me).has(["SendMessages", "AttachFiles"])
-      );
+    const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
+    const response = await axios({ url, method: "GET", responseType: "arraybuffer", timeout: 15000 });
+    const modifiedImage = await sharp(response.data).png().toBuffer();
+    const attachment = new AttachmentBuilder(modifiedImage, { name: `page-${currentPage}.png` });
 
-      if (!channel) {
-        console.warn(`⚠️ لا توجد قناة صالحة في سيرفر: ${guild.name}`);
-        continue;
-      }
-
-      const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
-      const response = await axios({
-        url,
-        method: "GET",
-        responseType: "arraybuffer",
-        timeout: 15000
-      });
-
-      const modifiedImage = await sharp(response.data).png().toBuffer();
-      const attachment = new AttachmentBuilder(modifiedImage, { name: `page-${currentPage}.png` });
-
-      await channel.send({
-        content: `📖 صفحة ${currentPage}`,
-        files: [attachment]
-      });
-
-      console.log(`✅ تم إرسال الصفحة ${currentPage} إلى سيرفر: ${guild.name}`);
-    }
+    await channel.send({ content: `📖 صفحة ${currentPage}`, files: [attachment] });
+    console.log(`✅ تم إرسال الصفحة ${currentPage} إلى القناة المحددة`);
 
     currentPage++;
     if (currentPage > 604) {
@@ -95,23 +71,16 @@ async function sendPage() {
 // ======================
 client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
-  console.log(`📌 البوت موجود في ${client.guilds.cache.size} سيرفرات`);
-
   await sendPage();
   pageInterval = setInterval(sendPage, 10 * 60 * 1000); // كل 10 دقائق
 });
 
 // ======================
-process.on("unhandledRejection", error => {
-  console.error("Unhandled promise rejection:", error);
-});
+process.on("unhandledRejection", error => console.error("Unhandled promise rejection:", error));
 
 // ======================
 // تسجيل الدخول
 // ======================
 client.login(TOKEN)
   .then(() => console.log("✅ تم تسجيل الدخول بنجاح"))
-  .catch(err => {
-    console.error("❌ فشل تسجيل الدخول:", err);
-    process.exit(1);
-  });
+  .catch(err => { console.error("❌ فشل تسجيل الدخول:", err); process.exit(1); });
