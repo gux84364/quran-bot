@@ -5,6 +5,7 @@ const sharp = require("sharp");
 
 // ======================
 // سيرفر Express (مهم لـ Render)
+// ======================
 const app = express();
 app.get("/", (req, res) => res.send("Bot is running"));
 const PORT = process.env.PORT || 10000;
@@ -12,6 +13,7 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // ======================
 // إعدادات البوت
+// ======================
 const TOKEN = process.env.TOKEN;
 if (!TOKEN) {
   console.error("❌ TOKEN غير موجود في Environment Variables");
@@ -24,42 +26,33 @@ let pageInterval = null;
 
 // ======================
 // تعريف البوت
+// ======================
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages
-  ]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
 // ======================
-// دالة إرسال صفحة لأي سيرفر
+// القنوات التي يرسل لها البوت
+// ======================
+const CHANNELS = [
+  "1475990635763990578" // القناة في السيرفر الجديد
+];
+
+// ======================
+// دالة إرسال صفحة
+// ======================
 async function sendPage() {
   try {
-    for (const guild of client.guilds.cache.values()) {
-
-      // أول قناة البوت يقدر يرسل فيها
-      const channel = guild.channels.cache.find(
-        ch =>
-          ch.isTextBased()
-      );
-
+    for (const channelId of CHANNELS) {
+      const channel = await client.channels.fetch(channelId).catch(() => null);
       if (!channel) continue;
-
-      // تحقق من الصلاحيات
-      const perms = channel.permissionsFor(guild.members.me);
-      if (!perms.has(["SendMessages", "AttachFiles"])) {
-        console.warn(`⚠️ لا يوجد صلاحيات في القناة ${channel.name} بسيرفر ${guild.name}`);
-        continue;
-      }
 
       const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
       const response = await axios({ url, method: "GET", responseType: "arraybuffer", timeout: 15000 });
-
-      const modifiedImage = await sharp(response.data).png().toBuffer();
-      const attachment = new AttachmentBuilder(modifiedImage, { name: `page-${currentPage}.png` });
+      const attachment = new AttachmentBuilder(await sharp(response.data).png().toBuffer(), { name: `page-${currentPage}.png` });
 
       await channel.send({ content: `📖 صفحة ${currentPage}`, files: [attachment] });
-      console.log(`✅ تم إرسال الصفحة ${currentPage} إلى القناة ${channel.name} بسيرفر ${guild.name}`);
+      console.log(`✅ تم إرسال الصفحة ${currentPage} إلى القناة ${channelId}`);
     }
 
     currentPage++;
@@ -75,10 +68,11 @@ async function sendPage() {
 
 // ======================
 // جاهزية البوت
+// ======================
 client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
   await sendPage();
-  pageInterval = setInterval(sendPage, 10 * 60 * 1000);
+  pageInterval = setInterval(sendPage, 10 * 60 * 1000); // كل 10 دقائق
 });
 
 // ======================
@@ -86,6 +80,7 @@ process.on("unhandledRejection", error => console.error("Unhandled promise rejec
 
 // ======================
 // تسجيل الدخول
+// ======================
 client.login(TOKEN)
   .then(() => console.log("✅ تم تسجيل الدخول بنجاح"))
   .catch(err => {
