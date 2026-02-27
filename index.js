@@ -1,3 +1,5 @@
+console.log("🚨 الكود الجديد اشتغل");
+process.exit(1);
 const express = require("express");
 const app = express();
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
@@ -112,3 +114,4 @@ client.login(TOKEN)
     console.error("❌ فشل تسجيل الدخول:", err);
     process.exit(1);
   });
+
