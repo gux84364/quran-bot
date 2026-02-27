@@ -1,13 +1,4 @@
-const { Client, GatewayIntentBits } = require("discord.js");
-const TOKEN = process.env.TOKEN;
-
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-client.login(TOKEN)
-  .then(() => console.log("✅ Logged in successfully"))
-  .catch(err => console.error("❌ Failed login:", err));
 const express = require("express");
-const app = express();
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
 const axios = require("axios");
 const sharp = require("sharp");
@@ -15,6 +6,7 @@ const sharp = require("sharp");
 // ======================
 // سيرفر Express (مهم لـ Render)
 // ======================
+const app = express();
 app.get("/", (req, res) => res.send("Bot is running"));
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
@@ -23,13 +15,12 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // إعدادات البوت
 // ======================
 const TOKEN = process.env.TOKEN;
-
-console.log("TOKEN LENGTH:", TOKEN ? TOKEN.length : "undefined"); // الآن بعد التعريف
-
 if (!TOKEN) {
   console.error("❌ TOKEN غير موجود في Environment Variables");
   process.exit(1);
 }
+
+console.log("TOKEN LENGTH:", TOKEN.length);
 
 let currentPage = 1;
 let pageInterval = null;
@@ -49,10 +40,7 @@ const client = new Client({
 // ======================
 async function sendPage() {
   try {
-    // لكل السيرفرات اللي البوت موجود فيها
     for (const guild of client.guilds.cache.values()) {
-
-      // أول قناة البوت يقدر يرسل فيها
       const channel = guild.channels.cache.find(
         ch =>
           ch.isTextBased() &&
@@ -82,7 +70,7 @@ async function sendPage() {
 
     currentPage++;
     if (currentPage > 604) {
-      currentPage = 1; // يرجع للبداية بدل ما يوقف
+      currentPage = 1;
       console.log("🔁 إعادة من الصفحة 1");
     }
 
@@ -96,7 +84,6 @@ async function sendPage() {
 // ======================
 client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
-
   await sendPage();
   pageInterval = setInterval(sendPage, 10 * 60 * 1000);
 });
@@ -115,4 +102,3 @@ client.login(TOKEN)
     console.error("❌ فشل تسجيل الدخول:", err);
     process.exit(1);
   });
-
