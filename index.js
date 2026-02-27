@@ -1,3 +1,11 @@
+const { Client, GatewayIntentBits } = require("discord.js");
+const TOKEN = process.env.TOKEN;
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+client.login(TOKEN)
+  .then(() => console.log("✅ Logged in successfully"))
+  .catch(err => console.error("❌ Failed login:", err));
 const express = require("express");
 const app = express();
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
@@ -107,3 +115,4 @@ client.login(TOKEN)
     console.error("❌ فشل تسجيل الدخول:", err);
     process.exit(1);
   });
+
