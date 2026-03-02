@@ -19,7 +19,6 @@ if (!TOKEN) {
   console.error("❌ TOKEN غير موجود في Environment Variables");
   process.exit(1);
 }
-console.log("TOKEN LENGTH:", TOKEN.length);
 
 let currentPage = 1;
 let pageInterval = null;
@@ -28,14 +27,18 @@ let pageInterval = null;
 // تعريف البوت
 // ======================
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ],
 });
 
 // ======================
-// القنوات التي يرسل لها البوت
+// القنوات
 // ======================
 const CHANNELS = [
-  "1475990635763990578" // القناة في السيرفر الجديد
+  "1475990635763990578"
 ];
 
 // ======================
@@ -43,16 +46,41 @@ const CHANNELS = [
 // ======================
 async function sendPage() {
   try {
+    console.log(`📤 محاولة إرسال الصفحة ${currentPage}`);
+
+    const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
+
+    const response = await axios({
+      url,
+      method: "GET",
+      responseType: "arraybuffer",
+      timeout: 20000
+    });
+
+    // ⭐ تعديل الخلفية لتكون بيضاء
+    const imageBuffer = await sharp(response.data)
+      .flatten({ background: "#ffffff" }) // يجبر الخلفية تكون بيضاء
+      .png({ quality: 100 })
+      .toBuffer();
+
+    const attachment = new AttachmentBuilder(imageBuffer, {
+      name: `page-${currentPage}.png`
+    });
+
     for (const channelId of CHANNELS) {
       const channel = await client.channels.fetch(channelId).catch(() => null);
-      if (!channel) continue;
 
-      const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
-      const response = await axios({ url, method: "GET", responseType: "arraybuffer", timeout: 15000 });
-      const attachment = new AttachmentBuilder(await sharp(response.data).png().toBuffer(), { name: `page-${currentPage}.png` });
+      if (!channel || !channel.isTextBased()) {
+        console.log(`⚠️ ما قدر يوصل للقناة ${channelId}`);
+        continue;
+      }
 
-      await channel.send({ content: `📖 صفحة ${currentPage}`, files: [attachment] });
-      console.log(`✅ تم إرسال الصفحة ${currentPage} إلى القناة ${channelId}`);
+      await channel.send({
+        content: `📖 صفحة ${currentPage}`,
+        files: [attachment]
+      });
+
+      console.log(`✅ تم الإرسال للقناة ${channelId}`);
     }
 
     currentPage++;
@@ -62,21 +90,50 @@ async function sendPage() {
     }
 
   } catch (err) {
-    console.error("❌ خطأ أثناء الإرسال:", err);
+    console.error("❌ خطأ أثناء الإرسال:", err.message);
   }
 }
 
 // ======================
-// جاهزية البوت
+// تشغيل الإرسال بأمان
+// ======================
+function startInterval() {
+  if (pageInterval) {
+    clearInterval(pageInterval);
+  }
+
+  pageInterval = setInterval(() => {
+    if (client.isReady()) {
+      sendPage();
+    }
+  }, 10 * 60 * 1000); // كل 10 دقائق
+
+  console.log("⏱️ Interval Started");
+}
+
+// ======================
+// أحداث البوت
 // ======================
 client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
   await sendPage();
-  pageInterval = setInterval(sendPage, 10 * 60 * 1000); // كل 10 دقائق
+  startInterval();
 });
 
-// ======================
-process.on("unhandledRejection", error => console.error("Unhandled promise rejection:", error));
+client.on("reconnecting", () => {
+  console.log("🔄 البوت يعيد الاتصال...");
+});
+
+client.on("disconnect", () => {
+  console.log("❌ انقطع الاتصال من ديسكورد");
+});
+
+client.on("error", console.error);
+client.on("warn", console.warn);
+
+process.on("unhandledRejection", error =>
+  console.error("Unhandled promise rejection:", error)
+);
 
 // ======================
 // تسجيل الدخول
