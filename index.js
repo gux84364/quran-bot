@@ -15,9 +15,13 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // إعدادات البوت
 // ======================
 const TOKEN = process.env.TOKEN;
-if (!TOKEN) {
-  console.error("❌ TOKEN غير موجود في Environment Variables");
+
+// ✅ فحص التوكن بشكل واضح
+if (!TOKEN || TOKEN.length < 50) {
+  console.error("❌ التوكن غير موجود أو قصير جدًا! تحقق من Environment Variables");
   process.exit(1);
+} else {
+  console.log("✅ التوكن موجود وطوله:", TOKEN.length);
 }
 
 let currentPage = 1;
@@ -57,9 +61,8 @@ async function sendPage() {
       timeout: 20000
     });
 
-    // ⭐ تعديل الخلفية لتكون بيضاء
     const imageBuffer = await sharp(response.data)
-      .flatten({ background: "#ffffff" }) // يجبر الخلفية تكون بيضاء
+      .flatten({ background: "#ffffff" })
       .png({ quality: 100 })
       .toBuffer();
 
@@ -106,7 +109,7 @@ function startInterval() {
     if (client.isReady()) {
       sendPage();
     }
-  }, 10 * 60 * 1000); // كل 10 دقائق
+  }, 10 * 60 * 1000);
 
   console.log("⏱️ Interval Started");
 }
@@ -118,14 +121,6 @@ client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
   await sendPage();
   startInterval();
-});
-
-client.on("reconnecting", () => {
-  console.log("🔄 البوت يعيد الاتصال...");
-});
-
-client.on("disconnect", () => {
-  console.log("❌ انقطع الاتصال من ديسكورد");
 });
 
 client.on("error", console.error);
@@ -141,6 +136,6 @@ process.on("unhandledRejection", error =>
 client.login(TOKEN)
   .then(() => console.log("✅ تم تسجيل الدخول بنجاح"))
   .catch(err => {
-    console.error("❌ فشل تسجيل الدخول:", err);
+    console.error("❌ فشل تسجيل الدخول:", err.message);
     process.exit(1);
   });
