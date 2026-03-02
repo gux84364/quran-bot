@@ -98,7 +98,7 @@ async function sendPage() {
 }
 
 // ======================
-// تشغيل الإرسال بأمان
+// تشغيل الإرسال بأمان كل دقيقة
 // ======================
 function startInterval() {
   if (pageInterval) {
@@ -109,9 +109,9 @@ function startInterval() {
     if (client.isReady()) {
       sendPage();
     }
-  }, 10 * 60 * 1000);
+  }, 1 * 60 * 1000); // ⬅️ كل دقيقة
 
-  console.log("⏱️ Interval Started");
+  console.log("⏱️ Interval Started (كل دقيقة)");
 }
 
 // ======================
