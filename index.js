@@ -16,7 +16,7 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // ======================
 const TOKEN = process.env.TOKEN;
 
-// ✅ فحص التوكن بشكل واضح
+// ✅ فحص التوكن
 if (!TOKEN || TOKEN.length < 50) {
   console.error("❌ التوكن غير موجود أو قصير جدًا! تحقق من Environment Variables");
   process.exit(1);
@@ -42,7 +42,7 @@ const client = new Client({
 // القنوات
 // ======================
 const CHANNELS = [
-  "1475990635763990578"
+  "1475990635763990578" // ضع هنا أي قناة تريد
 ];
 
 // ======================
@@ -53,7 +53,6 @@ async function sendPage() {
     console.log(`📤 محاولة إرسال الصفحة ${currentPage}`);
 
     const url = `https://quran.ksu.edu.sa/png_big/${currentPage}.png`;
-
     const response = await axios({
       url,
       method: "GET",
@@ -61,6 +60,7 @@ async function sendPage() {
       timeout: 20000
     });
 
+    // ⭐ تعديل الخلفية لتكون بيضاء
     const imageBuffer = await sharp(response.data)
       .flatten({ background: "#ffffff" })
       .png({ quality: 100 })
@@ -101,15 +101,11 @@ async function sendPage() {
 // تشغيل الإرسال بأمان كل دقيقة
 // ======================
 function startInterval() {
-  if (pageInterval) {
-    clearInterval(pageInterval);
-  }
+  if (pageInterval) clearInterval(pageInterval);
 
   pageInterval = setInterval(() => {
-    if (client.isReady()) {
-      sendPage();
-    }
-  }, 1 * 60 * 1000); // ⬅️ كل دقيقة
+    if (client.isReady()) sendPage();
+  }, 1 * 60 * 1000); // كل دقيقة
 
   console.log("⏱️ Interval Started (كل دقيقة)");
 }
@@ -119,7 +115,11 @@ function startInterval() {
 // ======================
 client.once("ready", async () => {
   console.log(`🔥 Logged in as ${client.user.tag}`);
+  
+  // إرسال صفحة واحدة فور التشغيل للتأكد
   await sendPage();
+  
+  // بدء الإرسال التلقائي كل دقيقة
   startInterval();
 });
 
